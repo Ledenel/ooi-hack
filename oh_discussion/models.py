@@ -28,6 +28,24 @@ class ONode(MPTTModel):
         return self.name
 
 
+class StickyTopics(models.Manager):
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(is_sticky=True).order_by('sticky_order')
+
+
+class NonStickyTopics(models.Manager):
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(is_sticky=False)
+
+
+class NonStickyVisibleTopics(models.Manager):
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.filter(is_sticky=False, is_visible=True)
+
+
 class OTopic(models.Model):
     title = models.CharField('标题', max_length=40, help_text='不超过40字')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='作者')
@@ -35,9 +53,17 @@ class OTopic(models.Model):
     create_time = models.DateTimeField('创建时间', auto_now_add=True)
     update_time = models.DateTimeField('修改时间', auto_now=True)
     revise_time = models.DateTimeField('最后更新时间', auto_now=True)
+    is_sticky = models.BooleanField('是否置顶', default=False)
+    sticky_order = models.IntegerField('置顶顺序', default=0)
+    is_locked = models.BooleanField('是否锁定', default=False)
     is_visible = models.BooleanField('是否可见', default=True)
     clicks = models.PositiveIntegerField('点击次数', default=0)
     content = models.TextField('内容', max_length=50000, help_text='不超过50000字')
+
+    objects = models.Manager()
+    sticky = StickyTopics()
+    none_sticky = NonStickyTopics()
+    visible = NonStickyVisibleTopics()
 
     class Meta:
         verbose_name = '讨论区主题'
@@ -55,6 +81,7 @@ class OReply(models.Model):
     topic = models.ForeignKey(OTopic, verbose_name='所属主题', related_name='replies')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, verbose_name='作者')
     create_time = models.DateTimeField('创建时间', auto_now_add=True)
+    is_visible = models.BooleanField('是否可见', default=True)
     content = models.TextField('内容', max_length=10000, help_text='不超过10000字')
 
     class Meta:
